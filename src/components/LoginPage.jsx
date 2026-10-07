@@ -1,35 +1,60 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { AuthFormModel } from '../models/AuthFormModel';
+import { AuthHeroPanel } from './auth/AuthHeroPanel';
+import { AuthHeader } from './auth/AuthHeader';
+import { AuthFields } from './auth/AuthFields';
+import { AuthDemoProfiles } from './auth/AuthDemoProfiles';
+import { SsoModal } from './auth/SsoModal';
 
+/**
+ * LoginPage: Executive Environmental Intelligence Authentication Screen.
+ * - Architecture: Domain OOP (AuthFormModel & EnterpriseAuthManager)
+ * - Layout: Edge-to-edge Full-Screen Split View
+ * - Styling: 100% Pure Tailwind CSS matching original GitHub repository
+ */
 export const LoginPage = () => {
   const { login, register, backendHealth } = useApp();
-  const [mode, setMode] = useState('login'); // 'login' | 'register'
-  const [email, setEmail] = useState('operator@nimbus.earth');
-  const [password, setPassword] = useState('Password123!');
-  const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState('user');
+  const [formModel, setFormModel] = useState(() => AuthFormModel.createDefault());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [showSsoModal, setShowSsoModal] = useState(false);
 
+  // Field & state handlers via OOP immutable mutations
+  const handleFieldChange = (fieldName, value) => {
+    setFormModel(prev => prev.withField(fieldName, value));
+  };
+
+  const handleModeChange = (newMode) => {
+    setError('');
+    setSuccessMsg('');
+    setFormModel(prev => prev.withMode(newMode));
+  };
+
+  // Submit Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccessMsg('');
-    setLoading(true);
 
+    // OOP Domain Validation
+    const validation = formModel.validate();
+    if (!validation.isValid) {
+      setError(validation.error);
+      return;
+    }
+
+    setLoading(true);
     try {
-      if (mode === 'login') {
-        await login(email, password);
+      if (formModel.isLogin) {
+        const payload = formModel.toLoginPayload();
+        await login(payload.email, payload.password);
       } else {
-        const regRes = await register({
-          email,
-          password,
-          role,
-          full_name: fullName || email.split('@')[0]
-        });
-        setSuccessMsg(regRes.message || 'Akun berhasil dibuat! Silakan login sekarang.');
-        setMode('login');
+        const payload = formModel.toRegisterPayload();
+        const res = await register(payload);
+        setSuccessMsg(res.message || 'Akun berhasil dibuat! Silakan login sekarang.');
+        setFormModel(prev => prev.withMode('login'));
       }
     } catch (err) {
       setError(err.message || 'Gagal masuk. Silakan periksa kembali email dan kata sandi Anda.');
@@ -38,12 +63,12 @@ export const LoginPage = () => {
     }
   };
 
-  const handleQuickLogin = (presetEmail, presetPassword) => {
-    setEmail(presetEmail);
-    setPassword(presetPassword);
+  // Quick 1-Click Demo Login
+  const handleQuickLogin = (profile) => {
+    setFormModel(prev => prev.withDemoProfile(profile));
     setError('');
     setLoading(true);
-    login(presetEmail, presetPassword)
+    login(profile.email, profile.password)
       .catch(err => {
         setError(err.message || 'Login failed');
       })
@@ -51,173 +76,75 @@ export const LoginPage = () => {
   };
 
   return (
-    <section id="login" className="login">
-      <div className="login-card">
-        {/* Left Visual Banner */}
-        <div className="login-visual">
-          <div className="logo-image">
-            <img src="/nimbus-logo.png" alt="Nimbus logo" />
+    <section id="login" className="w-full min-h-screen lg:h-screen grid grid-cols-1 lg:grid-cols-[44%_56%] xl:grid-cols-[42%_58%] bg-white text-slate-800 overflow-x-hidden">
+      {/* Modular Hero Panel (Left - Full Height Edge-to-Edge) */}
+      <AuthHeroPanel />
+
+      {/* Modular Form Panel (Right - Full Height Scrollable) */}
+      <div className="h-full min-h-screen lg:min-h-0 overflow-y-auto flex flex-col justify-between p-6 sm:p-12 xl:p-16 bg-white">
+        {/* Mobile Header (Brand visible on small screens) */}
+        <div className="lg:hidden flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+          <div className="w-[140px] bg-white border border-slate-200 rounded-lg p-2 inline-flex items-center shadow-xs">
+            <img src="/nimbus-logo.png" alt="Nimbus" className="w-full h-auto block" />
           </div>
-          <h1>Climate & Environmental Intelligence for a Resilient Tomorrow</h1>
-          <p>From data to action for people, nature and sustainable growth.</p>
         </div>
 
-        {/* Right Form Card */}
-        <div className="login-form">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <h2>{mode === 'login' ? 'Welcome Back' : 'Create Account'}</h2>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button
-                type="button"
-                className={`auth-toggle-btn ${mode === 'login' ? 'active' : ''}`}
-                onClick={() => { setMode('login'); setError(''); setSuccessMsg(''); }}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                className={`auth-toggle-btn ${mode === 'register' ? 'active' : ''}`}
-                onClick={() => { setMode('register'); setError(''); setSuccessMsg(''); }}
-              >
-                Register
-              </button>
-            </div>
-          </div>
+        {/* Inner Form Wrapper (Centered with max-w from original design) */}
+        <div className="w-full max-w-[460px] mx-auto my-auto py-4">
+          {/* Header & Segmented Mode Switch */}
+          <AuthHeader 
+            formModel={formModel} 
+            onChangeMode={handleModeChange} 
+          />
 
-          <div className="sub">
-            {mode === 'login' 
-              ? 'Sign in to access your Nimbus intelligence dashboard.'
-              : 'Register an instant active account without email confirmation.'}
-          </div>
-
-          {/* Feedback alerts */}
+          {/* Feedback Alerts */}
           {error && (
-            <div className="auth-alert error">
-              <span>⚠️ {error}</span>
+            <div className="p-3 rounded-lg text-xs font-medium mb-4 flex items-center gap-2 bg-[#fef2f2] border border-[#fee2e2] text-red-600">
+              <span>⚠️</span>
+              <span>{error}</span>
             </div>
           )}
           {successMsg && (
-            <div className="auth-alert success">
-              <span>✓ {successMsg}</span>
+            <div className="p-3 rounded-lg text-xs font-medium mb-4 flex items-center gap-2 bg-[#f0fdf4] border border-[#dcfce7] text-emerald-600">
+              <span>✓</span>
+              <span>{successMsg}</span>
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
-            {mode === 'register' && (
-              <>
-                <div className="field">
-                  <label>Full Name</label>
-                  <input
-                    type="text"
-                    placeholder="Nama Lengkap"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="field">
-                  <label>Role</label>
-                  <select
-                    className="select"
-                    style={{ width: '100%', height: 46 }}
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                  >
-                    <option value="user">Operator / Field Client (Role: user)</option>
-                    <option value="superadmin">Administrator / Owner (Role: superadmin)</option>
-                  </select>
-                </div>
-              </>
-            )}
+          {/* Input Fields & Submit Form */}
+          <AuthFields
+            formModel={formModel}
+            onFieldChange={handleFieldChange}
+            onSubmit={handleSubmit}
+            loading={loading}
+          />
 
-            <div className="field">
-              <label>Email</label>
-              <input
-                type="email"
-                placeholder="name@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
+          {/* 1-Click Demo Profiles & SSO */}
+          <AuthDemoProfiles 
+            onSelectProfile={handleQuickLogin} 
+            onOpenSso={() => setShowSsoModal(true)}
+            disabled={loading} 
+          />
+        </div>
 
-            <div className="field">
-              <label>Password</label>
-              <input
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-
-            {mode === 'login' && (
-              <div className="login-row">
-                <span className="link" style={{ cursor: 'pointer' }} onClick={() => alert('Fitur reset password tersedia melalui Administrator Nimbus.')}>
-                  Forgot password?
-                </span>
-              </div>
-            )}
-
-            <button type="submit" className="primary" style={{ width: '100%' }} disabled={loading}>
-              {loading 
-                ? 'Authenticating...' 
-                : mode === 'login' ? 'Login' : 'Create & Activate Account'}
-            </button>
-          </form>
-
-          {/* Quick 1-Click Credentials for Evaluators & Demo */}
-          <div className="divider">quick demo access</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
-            <button
-              type="button"
-              className="demo-badge-btn"
-              onClick={() => handleQuickLogin('operator@nimbus.earth', 'Password123!')}
-              disabled={loading}
-              title="Login as User Biasa / Operator"
-            >
-              <span className="demo-badge-role">Operator (User)</span>
-              <span className="demo-badge-email">operator@nimbus.earth</span>
-            </button>
-            <button
-              type="button"
-              className="demo-badge-btn superadmin"
-              onClick={() => handleQuickLogin('admin@nimbus.earth', 'Password123!')}
-              disabled={loading}
-              title="Login instantly with role 'superadmin'"
-            >
-              <span className="demo-badge-role gold">Superadmin</span>
-              <span className="demo-badge-email">admin@nimbus.earth</span>
-            </button>
-          </div>
-
-          <div className="divider">or</div>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => handleQuickLogin('operator@nimbus.earth', 'Password123!')}
-          >
-            ◉ &nbsp; Login with SSO
-          </button>
-
-          {/* Server Connection Status footer */}
-          <div style={{ marginTop: 20, textAlign: 'center', fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <span style={{
-              display: 'inline-block',
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              backgroundColor: backendHealth.isLive ? 'var(--green)' : 'var(--amber)'
-            }} />
-            <span>
-              {backendHealth.isLive 
-                ? 'Backend Live: Nimbus AI & Supabase Connected (localhost:8000)'
-                : 'Offline Mode: Local Telemetry Simulator Ready'}
-            </span>
-          </div>
+        {/* Server Connection Status Footnote */}
+        <div className="mt-6 pt-4 text-center text-[11px] text-slate-400 flex items-center justify-center gap-2">
+          <span className={`inline-block w-2 h-2 rounded-full ${backendHealth.isLive ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+          <span>
+            {backendHealth.isLive 
+              ? 'Backend Live: Nimbus AI & Supabase Connected (localhost:8000)'
+              : 'Offline Mode: Local Telemetry Simulator Ready'}
+          </span>
         </div>
       </div>
+
+      {/* Enterprise Single Sign-On Modal */}
+      <SsoModal 
+        isOpen={showSsoModal} 
+        onClose={() => setShowSsoModal(false)} 
+      />
     </section>
   );
 };
+
+export default LoginPage;

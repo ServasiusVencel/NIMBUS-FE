@@ -1,78 +1,67 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { INITIAL_CLIENTS, INITIAL_SENSORS, GENERATE_10_DAY_FORECAST, PEST_DISEASE_ALERTS } from '../data/mockData';
-import { apiService, getStoredToken, getStoredUser, setStoredToken, setStoredUser } from '../services/api';
+import { 
+  INITIAL_CLIENTS, 
+  INITIAL_SENSORS, 
+  GENERATE_10_DAY_FORECAST, 
+  PEST_DISEASE_ALERTS,
+  MOCK_SUPERADMIN_USERS 
+} from '../data/mockData';
+import { SensorStation } from '../models/fleet/SensorStation';
+import { EnterpriseClient } from '../models/fleet/EnterpriseClient';
+import { DailyOperationalWindow, PestAlert } from '../models/agriculture/AgriculturePlan';
+import { AuthSessionManager } from './managers/AuthSessionManager';
+import { FleetManager } from './managers/FleetManager';
+import { BackendHealthMonitor } from './managers/BackendHealthMonitor';
+import { NavigationGuard } from './managers/NavigationGuard';
 
 const AppContext = createContext(null);
 
 export const AppProvider = ({ children }) => {
-  // Authentication & Token State
-  const initialToken = getStoredToken();
-  const initialUser = getStoredUser();
+  // 1. Auth & Session State (managed via AuthSessionManager)
+  const initialAuth = AuthSessionManager.getInitialState();
+  const [isLoggedIn, setIsLoggedIn] = useState(initialAuth.isLoggedIn);
+  const [currentUser, setCurrentUser] = useState(initialAuth.currentUser);
+  const [userRole, setUserRole] = useState(initialAuth.userRole);
 
-  const [isLoggedIn, setIsLoggedIn] = useState(!!initialToken);
-  const [currentUser, setCurrentUser] = useState(initialUser || {
-    id: 'user-default',
-    email: 'operator@nimbus.earth',
-    role: 'user',
-    full_name: 'John Doe'
-  });
-  const [userRole, setUserRole] = useState(initialUser?.role || 'user'); // 'user' | 'superadmin'
-
-  // Entities & Station State
+  // 2. Fleet & Station State (managed via FleetManager)
+  const [clients, setClients] = useState(() => 
+    INITIAL_CLIENTS.map(c => EnterpriseClient.fromJSON(c))
+  );
   const [activeClientId, setActiveClientId] = useState('CLI-002');
-  const [clients, setClients] = useState(INITIAL_CLIENTS);
-  const [sensors, setSensors] = useState(INITIAL_SENSORS);
-  const [activeSensorId, setActiveSensorId] = useState('AWS-PLG-01');
-  const [activeTab, setActiveTab] = useState('map'); // 'map' | 'weather' | 'fire' | 'agri' | 'owner' | 'settings'
 
-  // Backend Health
+  const [sensors, setSensors] = useState(() => 
+    INITIAL_SENSORS.map(s => SensorStation.fromJSON(s))
+  );
+  const [activeSensorId, setActiveSensorId] = useState('AWS-PLG-01');
+
+  // 3. Navigation State (guarded via NavigationGuard)
+  const [activeTab, setActiveTabState] = useState('dashboard');
+  const setActiveTab = (tab) => {
+    setActiveTabState(NavigationGuard.normalizeTab(tab, userRole));
+  };
+
+  // 4. Backend Health State (polled via BackendHealthMonitor)
   const [backendHealth, setBackendHealth] = useState({ isLive: false, checked: false, data: null });
   const [isRetraining, setIsRetraining] = useState(false);
 
-  // Check Backend AI Health & verify session
   useEffect(() => {
-    let isMounted = true;
-    async function initCheck() {
-      const res = await apiService.checkHealth();
-      if (isMounted) {
-        setBackendHealth({ isLive: res.isLive, checked: true, data: res.data });
+    // Session token check
+    AuthSessionManager.verifySession().then(verifiedUser => {
+      if (verifiedUser) {
+        setCurrentUser(verifiedUser);
+        setUserRole(verifiedUser.role || 'user');
+        setIsLoggedIn(true);
       }
+    });
 
-      // If token exists, verify with /api/v1/auth/me
-      if (getStoredToken()) {
-        try {
-          const meRes = await apiService.getMe();
-          if (isMounted && meRes.success && meRes.user) {
-            setCurrentUser(meRes.user);
-            setUserRole(meRes.user.role || 'user');
-            setIsLoggedIn(true);
-          }
-        } catch {
-          // Token might be expired or server restarted
-        }
-      }
-    }
-
-    initCheck();
-    const interval = setInterval(async () => {
-      const res = await apiService.checkHealth();
-      if (isMounted) {
-        setBackendHealth({ isLive: res.isLive, checked: true, data: res.data });
-      }
-    }, 15000);
-
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
+    // Start background health polling
+    return BackendHealthMonitor.startPolling(15000, setBackendHealth);
   }, []);
 
-  // Derived Client & Sensors
-  const activeClient = clients.find(c => c.id === activeClientId) || clients[0];
-  const visibleSensors = userRole === 'superadmin'
-    ? sensors
-    : sensors.filter(s => s.clientId === activeClientId);
-  const activeSensor = sensors.find(s => s.id === activeSensorId) || visibleSensors[0] || sensors[0];
+  // Fleet Entity Derivations
+  const activeClient = FleetManager.getActiveClient(clients, activeClientId);
+  const visibleSensors = FleetManager.getVisibleSensors(sensors, activeClientId, userRole);
+  const activeSensor = FleetManager.getActiveSensor(sensors, activeSensorId, visibleSensors);
 
   const handleClientChange = (newClientId) => {
     setActiveClientId(newClientId);
@@ -82,62 +71,58 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  // Auth: Login Action
+  // Auth Action Handlers
   const login = async (email, password) => {
-    try {
-      const res = await apiService.login(email, password);
-      if (res.access_token) {
-        setIsLoggedIn(true);
-        const userObj = res.user || { email, role: 'user', full_name: email.split('@')[0] };
-        setCurrentUser(userObj);
-        setUserRole(userObj.role || 'user');
-        setActiveTab('map');
-        return { success: true, user: userObj };
-      }
-      throw new Error('No access token returned from server');
-    } catch (err) {
-      // Offline fallback for demo if backend is offline
-      if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-        const isSuperadmin = email.includes('admin') || email.includes('super');
-        const mockUser = {
-          id: 'mock-offline-id',
-          email,
-          role: isSuperadmin ? 'superadmin' : 'user',
-          full_name: isSuperadmin ? 'Nimbus Executive' : 'John Doe'
-        };
-        setStoredToken('mock-demo-token');
-        setStoredUser(mockUser);
-        setIsLoggedIn(true);
-        setCurrentUser(mockUser);
-        setUserRole(mockUser.role);
-        setActiveTab('map');
-        return { success: true, user: mockUser, offline: true };
-      }
-      throw err;
+    const result = await AuthSessionManager.login(email, password);
+    if (result.success) {
+      setIsLoggedIn(true);
+      setCurrentUser(result.user);
+      setUserRole(result.role);
+      setActiveTab('dashboard');
     }
+    return result;
   };
 
-  // Auth: Register Action
-  const register = async (userData) => {
-    return await apiService.register(userData);
+  const loginWithSSO = async (provider, customData = {}) => {
+    const result = await AuthSessionManager.loginWithSSO(provider, customData);
+    if (result.success) {
+      setIsLoggedIn(true);
+      setCurrentUser(result.user);
+      setUserRole(result.role);
+      setActiveTab('dashboard');
+    }
+    return result;
   };
 
-  // Auth: Logout Action
+  const register = (userData) => AuthSessionManager.register(userData);
+
   const logout = async () => {
-    await apiService.logout();
+    await AuthSessionManager.logout();
     setIsLoggedIn(false);
     setCurrentUser(null);
     setUserRole('user');
-    setActiveTab('map');
+    setActiveTab('dashboard');
   };
 
-  // CMS Helpers
-  const addClient = (newClient) => setClients(prev => [...prev, newClient]);
-  const updateClient = (clientId, updatedData) => setClients(prev => prev.map(c => c.id === clientId ? { ...c, ...updatedData } : c));
-  const addSensor = (newSensor) => setSensors(prev => [...prev, newSensor]);
-  const updateSensor = (sensorId, updatedData) => setSensors(prev => prev.map(s => s.id === sensorId ? { ...s, ...updatedData } : s));
+  const updateProfile = async (profileData) => {
+    const updatedUser = AuthSessionManager.updateProfile(currentUser, profileData);
+    setCurrentUser(updatedUser);
+    return { success: true, user: updatedUser };
+  };
 
-  const forecast10Days = GENERATE_10_DAY_FORECAST();
+  const changePassword = async (passwords) => AuthSessionManager.changePassword(passwords);
+
+  // Fleet Action Handlers
+  const addClient = (data) => setClients(prev => FleetManager.addClient(prev, data));
+  const updateClient = (id, data) => setClients(prev => FleetManager.updateClient(prev, id, data));
+  const toggleClientModule = (id, mod) => setClients(prev => FleetManager.toggleClientModule(prev, id, mod));
+  const addSensor = (data) => setSensors(prev => FleetManager.addSensor(prev, data));
+  const updateSensor = (id, data) => setSensors(prev => FleetManager.updateSensor(prev, id, data));
+  const toggleSensorCapability = (id, cap) => setSensors(prev => FleetManager.toggleSensorCapability(prev, id, cap));
+
+  // Domain Datasets
+  const forecast10Days = GENERATE_10_DAY_FORECAST().map(f => DailyOperationalWindow.fromJSON(f));
+  const pestAlerts = PEST_DISEASE_ALERTS.map(p => PestAlert.fromJSON(p));
 
   return (
     <AppContext.Provider
@@ -155,19 +140,25 @@ export const AppProvider = ({ children }) => {
         activeTab,
         backendHealth,
         forecast10Days,
-        pestAlerts: PEST_DISEASE_ALERTS,
+        pestAlerts,
+        mockSuperadminUsers: MOCK_SUPERADMIN_USERS,
         isRetraining,
         setIsRetraining,
         setActiveTab,
         setActiveSensorId,
         handleClientChange,
         login,
+        loginWithSSO,
         register,
         logout,
         addClient,
         updateClient,
+        toggleClientModule,
         addSensor,
         updateSensor,
+        toggleSensorCapability,
+        updateProfile,
+        changePassword,
       }}
     >
       {children}

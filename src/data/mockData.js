@@ -394,3 +394,35 @@ export const PEST_DISEASE_ALERTS = [
     affectedStations: ['AWS-RIAU-02'],
   },
 ];
+
+// Superadmin Fallback Mock Users for CMS Demo
+export const MOCK_SUPERADMIN_USERS = [
+  {
+    id: 'usr-sa-001',
+    email: 'admin@nimbus.earth',
+    full_name: 'Nimbus Superadministrator',
+    role: 'superadmin',
+    created_at: '2026-01-10T08:00:00Z',
+  },
+  {
+    id: 'usr-op-002',
+    email: 'operator@nimbus.earth',
+    full_name: 'Field Operations Lead',
+    role: 'user',
+    created_at: '2026-02-15T09:30:00Z',
+  },
+  {
+    id: 'usr-cl-003',
+    email: 'bambang.h@nusantara-agro.co.id',
+    full_name: 'Ir. Bambang Hartono, M.Sc',
+    role: 'user',
+    created_at: '2026-03-01T11:20:00Z',
+  },
+  {
+    id: 'usr-cl-004',
+    email: 'sarah.nurulita@peatland-restoration.org',
+    full_name: 'Dr. Sarah Nurulita',
+    role: 'user',
+    created_at: '2026-03-20T14:15:00Z',
+  },
+];

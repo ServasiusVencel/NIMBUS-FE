@@ -1,10 +1,31 @@
-/* ==========================================================================
-   NIMBUS DESIGN SYSTEM
-   Dominant White & Blue, Subtle Grey, Crimson/Red Hazard Accents
-   Minimalist, Elegant Enterprise Intelligence Dashboard
-   ========================================================================== */
+@import "tailwindcss";
+@plugin "daisyui";
+
+@theme {
+  --color-blue: #0284c7;
+  --color-blue-dark: #0369a1;
+  --color-blue2: #0369a1;
+  --color-navy: #0f172a;
+  --color-danger: #ef4444;
+  --color-emerald: #10b981;
+  --color-amber: #f59e0b;
+  --color-teal: #0d9488;
+  --color-nimbus-blue: #0284c7;
+  --color-nimbus-navy: #0f172a;
+  --color-nimbus-red: #dc2626;
+  --color-nimbus-green: #10b981;
+  --color-nimbus-amber: #f59e0b;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
 
 :root {
+  /* DaisyUI Theme Tokens mapped to Nimbus Design Tokens */
+  --color-primary: #0284c7;
+  --color-primary-content: #ffffff;
+  --color-info: #0284c7;
+  --color-success: #10b981;
+
   /* Color Palette */
   --bg-primary: #f8fafc;
   --bg-secondary: #ffffff;
@@ -67,16 +88,14 @@
   --transition-normal: 0.25s ease;
 }
 
-/* Reset & Box Sizing */
-*, *::before, *::after {
-  box-sizing: border-box;
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
   margin: 0;
   padding: 0;
-}
-
-html, body {
-  width: 100%;
-  min-height: 100%;
   font-family: var(--font-sans);
   background-color: var(--bg-primary);
   color: var(--text-primary);
@@ -86,45 +105,125 @@ html, body {
 }
 
 #root {
-  min-height: 100vh;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
+/* ==========================================================================
+   Modern Minimalist Custom Scrollbar (Cross-browser, eliminates OS arrow buttons)
+   ========================================================================== */
+
+/* Standard W3C CSS Scrollbars (Firefox 64+, Chrome 121+, Safari 17.2+) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+}
+
+/* WebKit & Blink Browsers (Chrome, Edge, Opera, Safari) */
+::-webkit-scrollbar,
+*::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-::-webkit-scrollbar-track {
-  background: var(--bg-tertiary);
-}
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: var(--radius-full);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+
+/* Track is transparent so page backgrounds blend seamlessly */
+::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-/* Typography Helpers */
-h1, h2, h3, h4, h5, h6 {
-  color: var(--text-primary);
-  font-weight: 700;
-  letter-spacing: -0.02em;
+/* Rounded, pill-shaped thumb with floating padding effect */
+::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.45);
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-p {
-  color: var(--text-secondary);
+/* Hover state - deeper slate tone */
+::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(100, 116, 139, 0.75);
 }
 
-a {
-  color: var(--blue-600);
-  text-decoration: none;
-  transition: color var(--transition-fast);
+/* Active / Dragging state */
+::-webkit-scrollbar-thumb:active,
+*::-webkit-scrollbar-thumb:active {
+  background-color: rgba(71, 85, 105, 0.95);
 }
-a:hover {
-  color: var(--blue-800);
+
+/* Crucial: Completely eliminate native OS scrollbar buttons/triangles */
+::-webkit-scrollbar-button,
+*::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Corner junction between horizontal and vertical scrollbars */
+::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+
+/* Utility classes for specific UI scroll containers */
+.scrollbar-none,
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.scrollbar-none::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.scrollbar-subtle {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(203, 213, 225, 0.35) transparent;
+}
+.scrollbar-subtle::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.scrollbar-subtle::-webkit-scrollbar-thumb {
+  background-color: rgba(203, 213, 225, 0.35);
+  border-radius: 9999px;
+}
+.scrollbar-subtle::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.6);
+}
+
+/* Typography Helpers in base layer so utility classes like text-white override them cleanly */
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: var(--text-primary);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  p {
+    color: var(--text-secondary);
+  }
+
+  a {
+    color: var(--blue-600);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+  }
+
+  a:hover {
+    color: var(--blue-800);
+  }
 }
 
 /* Buttons */
@@ -149,6 +248,7 @@ a:hover {
   color: #ffffff;
   box-shadow: 0 2px 4px rgba(2, 132, 199, 0.25);
 }
+
 .btn-primary:hover {
   background: linear-gradient(135deg, var(--blue-700), var(--blue-800));
   box-shadow: 0 4px 8px rgba(2, 132, 199, 0.35);
@@ -160,6 +260,7 @@ a:hover {
   color: var(--text-secondary);
   border: 1px solid var(--border-light);
 }
+
 .btn-secondary:hover {
   background: var(--bg-tertiary);
   color: var(--text-primary);
@@ -171,6 +272,7 @@ a:hover {
   color: var(--blue-600);
   border: 1px solid var(--blue-200);
 }
+
 .btn-outline-blue:hover {
   background: var(--blue-50);
   border-color: var(--blue-400);
@@ -180,6 +282,7 @@ a:hover {
   background: var(--danger-crimson);
   color: #ffffff;
 }
+
 .btn-danger:hover {
   background: var(--danger-dark);
 }
@@ -207,16 +310,19 @@ a:hover {
   color: #047857;
   border: 1px solid #a7f3d0;
 }
+
 .badge-warning {
   background: var(--warning-bg);
   color: #b45309;
   border: 1px solid #fde68a;
 }
+
 .badge-danger {
   background: var(--danger-bg);
   color: #b91c1c;
   border: 1px solid #fecaca;
 }
+
 .badge-info {
   background: var(--blue-50);
   color: var(--blue-700);
@@ -230,14 +336,17 @@ a:hover {
   border-radius: 50%;
   display: inline-block;
 }
+
 .dot-online {
   background-color: var(--status-online);
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
+
 .dot-warning {
   background-color: var(--status-warning);
   box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
 }
+
 .dot-danger {
   background-color: var(--status-danger);
   box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
@@ -252,6 +361,7 @@ a:hover {
   padding: 1.5rem;
   transition: box-shadow var(--transition-normal), border-color var(--transition-normal);
 }
+
 .nimbus-card:hover {
   border-color: #cbd5e1;
   box-shadow: var(--shadow-md);
@@ -265,13 +375,213 @@ a:hover {
   border-radius: inherit;
   z-index: 10;
 }
+
 .leaflet-popup-content-wrapper {
   border-radius: var(--radius-md) !important;
   box-shadow: var(--shadow-lg) !important;
   padding: 0 !important;
   border: 1px solid var(--border-light) !important;
 }
+
 .leaflet-popup-content {
   margin: 0 !important;
   line-height: 1.4 !important;
+}
+
+/* ==========================================================================
+   DaisyUI Toggle Switch Enhancements
+   Replaces dark/ghostly default with clean, vibrant, high-contrast switch button.
+   ========================================================================== */
+
+input[type="checkbox"].toggle,
+.toggle[type="checkbox"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  flex-shrink: 0 !important;
+  cursor: pointer !important;
+  border-radius: 9999px !important;
+  background-color: #cbd5e1 !important; /* Clearly visible slate-300 track when OFF */
+  border: 1px solid #94a3b8 !important; /* Subtle border for crisp definition */
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease !important;
+  vertical-align: middle !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  grid-template-columns: none !important; /* Override daisyui grid */
+}
+
+/* Knob / Thumb */
+input[type="checkbox"].toggle::before,
+.toggle[type="checkbox"]::before {
+  content: "" !important;
+  position: absolute !important;
+  border-radius: 9999px !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.12) !important;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  grid-row-start: auto !important;
+  grid-column-start: auto !important;
+}
+
+/* Default / Medium (toggle-md) */
+input[type="checkbox"].toggle,
+.toggle[type="checkbox"],
+input[type="checkbox"].toggle-md,
+.toggle-md[type="checkbox"] {
+  width: 44px !important;
+  height: 24px !important;
+}
+input[type="checkbox"].toggle::before,
+.toggle[type="checkbox"]::before,
+input[type="checkbox"].toggle-md::before,
+.toggle-md[type="checkbox"]::before {
+  top: 2px !important;
+  left: 2px !important;
+  width: 18px !important;
+  height: 18px !important;
+}
+input[type="checkbox"].toggle:checked::before,
+.toggle[type="checkbox"]:checked::before,
+input[type="checkbox"].toggle-md:checked::before,
+.toggle-md[type="checkbox"]:checked::before {
+  transform: translateX(20px) !important;
+}
+
+/* Size: xs */
+input[type="checkbox"].toggle-xs,
+.toggle-xs[type="checkbox"] {
+  width: 28px !important;
+  height: 16px !important;
+}
+input[type="checkbox"].toggle-xs::before,
+.toggle-xs[type="checkbox"]::before {
+  top: 1.5px !important;
+  left: 1.5px !important;
+  width: 11px !important;
+  height: 11px !important;
+}
+input[type="checkbox"].toggle-xs:checked::before,
+.toggle-xs[type="checkbox"]:checked::before {
+  transform: translateX(12px) !important;
+}
+
+/* Size: sm */
+input[type="checkbox"].toggle-sm,
+.toggle-sm[type="checkbox"] {
+  width: 38px !important;
+  height: 22px !important;
+}
+input[type="checkbox"].toggle-sm::before,
+.toggle-sm[type="checkbox"]::before {
+  top: 2px !important;
+  left: 2px !important;
+  width: 16px !important;
+  height: 16px !important;
+}
+input[type="checkbox"].toggle-sm:checked::before,
+.toggle-sm[type="checkbox"]:checked::before {
+  transform: translateX(16px) !important;
+}
+
+/* Size: lg */
+input[type="checkbox"].toggle-lg,
+.toggle-lg[type="checkbox"] {
+  width: 52px !important;
+  height: 28px !important;
+}
+input[type="checkbox"].toggle-lg::before,
+.toggle-lg[type="checkbox"]::before {
+  top: 2.5px !important;
+  left: 2.5px !important;
+  width: 21px !important;
+  height: 21px !important;
+}
+input[type="checkbox"].toggle-lg:checked::before,
+.toggle-lg[type="checkbox"]:checked::before {
+  transform: translateX(24px) !important;
+}
+
+/* Size: xl */
+input[type="checkbox"].toggle-xl,
+.toggle-xl[type="checkbox"] {
+  width: 62px !important;
+  height: 34px !important;
+}
+input[type="checkbox"].toggle-xl::before,
+.toggle-xl[type="checkbox"]::before {
+  top: 3px !important;
+  left: 3px !important;
+  width: 26px !important;
+  height: 26px !important;
+}
+input[type="checkbox"].toggle-xl:checked::before,
+.toggle-xl[type="checkbox"]:checked::before {
+  transform: translateX(28px) !important;
+}
+
+/* Checked Colors */
+input[type="checkbox"].toggle:checked,
+.toggle[type="checkbox"]:checked,
+input[type="checkbox"].toggle-primary:checked,
+.toggle-primary[type="checkbox"]:checked {
+  background-color: #0284c7 !important; /* Nimbus sky-600 */
+  border-color: #0284c7 !important;
+}
+
+input[type="checkbox"].toggle-info:checked,
+.toggle-info[type="checkbox"]:checked {
+  background-color: #0ea5e9 !important;
+  border-color: #0ea5e9 !important;
+}
+
+input[type="checkbox"].toggle-success:checked,
+.toggle-success[type="checkbox"]:checked {
+  background-color: #10b981 !important;
+  border-color: #10b981 !important;
+}
+
+input[type="checkbox"].toggle-warning:checked,
+.toggle-warning[type="checkbox"]:checked {
+  background-color: #f59e0b !important;
+  border-color: #f59e0b !important;
+}
+
+input[type="checkbox"].toggle-error:checked,
+.toggle-error[type="checkbox"]:checked {
+  background-color: #ef4444 !important;
+  border-color: #ef4444 !important;
+}
+
+input[type="checkbox"].toggle-secondary:checked,
+.toggle-secondary[type="checkbox"]:checked {
+  background-color: #64748b !important;
+  border-color: #64748b !important;
+}
+
+input[type="checkbox"].toggle-accent:checked,
+.toggle-accent[type="checkbox"]:checked {
+  background-color: #8b5cf6 !important;
+  border-color: #8b5cf6 !important;
+}
+
+input[type="checkbox"].toggle-neutral:checked,
+.toggle-neutral[type="checkbox"]:checked {
+  background-color: #0f172a !important;
+  border-color: #0f172a !important;
+}
+
+/* Focus and Disabled states */
+input[type="checkbox"].toggle:focus-visible,
+.toggle[type="checkbox"]:focus-visible {
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.3) !important;
+}
+
+input[type="checkbox"].toggle:disabled,
+.toggle[type="checkbox"]:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
 }
