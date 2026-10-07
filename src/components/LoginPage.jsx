@@ -175,9 +175,9 @@ export const LoginPage = () => {
               className="demo-badge-btn"
               onClick={() => handleQuickLogin('operator@nimbus.earth', 'Password123!')}
               disabled={loading}
-              title="Login instantly with role 'user'"
+              title="Login as User Biasa / Operator"
             >
-              <span className="demo-badge-role">Operator</span>
+              <span className="demo-badge-role">Operator (User)</span>
               <span className="demo-badge-email">operator@nimbus.earth</span>
             </button>
             <button

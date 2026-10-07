@@ -240,6 +240,7 @@ export const apiService = {
       };
     }
   },
+  
 
   // 10. 10-Day Forward Forecast API (POST /api/v1/forecast/10-days)
   async get10DayForecast(sensorPayload) {
